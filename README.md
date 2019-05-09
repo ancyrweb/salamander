@@ -13,3 +13,5 @@ Features :
 
 
 ### Get started
+
+`yarn add salamander-api`

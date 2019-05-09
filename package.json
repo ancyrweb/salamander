@@ -1,6 +1,6 @@
 {
-  "name": "salamander",
-  "version": "1.0.0",
+  "name": "salamander-api",
+  "version": "0.1.0",
   "main": "dist/index.js",
   "license": "MIT",
   "scripts": {
