@@ -8,7 +8,7 @@ import MetadataCollector from "./MetadataCollector";
 import RequestContext from "./RequestContext";
 import MiddlewareInterface from "../interface/MiddlewareInterface";
 import LoggerInterface from "../service/LoggerInterface";
-import { StringMap } from "../../src/typings/types";
+import { AppHelpers, StringMap } from "../types";
 
 type AppConfigureConf = {
   config: object;
@@ -67,6 +67,16 @@ class App {
     this.logger = conf.logger;
     this.initialize();
 
+    // Create helpers so that services / middlewares can access App's public internals
+    const helpers: AppHelpers = {
+      getURL: () => {
+        return this.url;
+      },
+      getLogger: () => {
+        return this.logger;
+      }
+    };
+
     // - Step 1 : load services and configure them
     for (let service of conf.services) {
       service.__smuid__ = "" + uniqId++;
@@ -102,7 +112,7 @@ class App {
 
     // - Step 4 : integrate routers with Express
     conf.routers.forEach(router => {
-      router.integrate(this.app);
+      router.integrate(this.app, helpers);
     });
 
     return this;

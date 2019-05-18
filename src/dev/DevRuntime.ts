@@ -1,4 +1,3 @@
-import chalk from "chalk";
 import DevEnvironmentInterface from "./DevEnvironmentInterface";
 
 /**

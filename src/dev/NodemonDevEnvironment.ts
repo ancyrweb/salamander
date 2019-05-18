@@ -15,7 +15,7 @@ class NodemonDevEnvironment implements DevEnvironmentInterface {
 
     log(chalk.bold.yellowBright("Salamander v1.0.0 - Development Runtime"));
     log(
-      "S> I will take care of running Nodemon and Webpack in background for you :)"
+      "S> I will take care of running the development environment in background for you :)"
     );
 
     nodemon(this.data);

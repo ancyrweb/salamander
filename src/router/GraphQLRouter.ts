@@ -6,16 +6,23 @@ import { ApolloServer, SchemaDirectiveVisitor } from "apollo-server-express";
 
 import RouterInterface from "../interface/RouterInterface";
 import { Metadata } from "../kernel/MetadataCollector";
-import { logger } from "../helper";
 import { GraphQLExtension } from "graphql-extensions";
 import { GraphQLScalarType, print } from "graphql";
+import { AppHelpers } from "../types";
+import LoggerInterface from "../service/LoggerInterface";
 
 class LogExtension<TContext = any> implements GraphQLExtension<TContext> {
   private startTime: number;
+  private logger: LoggerInterface;
+
+  constructor(logger: LoggerInterface) {
+    this.logger = logger;
+  }
 
   requestDidStart(o) {
     this.startTime = new Date().getTime();
   }
+
   willSendResponse(options) {
     let elapsedTime = new Date().getTime() - this.startTime;
     let unit = "ms";
@@ -25,10 +32,10 @@ class LogExtension<TContext = any> implements GraphQLExtension<TContext> {
     }
 
     const loggedQuery = options.queryString || print(options.parsedQuery);
-    logger().info(`GraphQL Request ${elapsedTime}${unit} `);
+    this.logger.info(`GraphQL Request ${elapsedTime}${unit} `);
     if (options.graphqlResponse.errors) {
       options.graphqlResponse.errors.forEach((err: Error) => {
-        logger().error(err.stack);
+        this.logger.error(err.stack);
       });
     }
   }
@@ -48,7 +55,7 @@ class GraphQLRouter implements RouterInterface {
     directives?: Record<string, typeof SchemaDirectiveVisitor>;
     types: { [key: string]: GraphQLScalarType };
   }) {
-    // Automatically load the schema
+    // Automatically load the schemas in the path
     const files = glob.sync(conf.schemaPath + "/**/*.ts");
     for (let path of files) {
       const typedef = require(path).default;
@@ -85,7 +92,7 @@ class GraphQLRouter implements RouterInterface {
     }
   }
 
-  integrate(app: express.Application) {
+  integrate(app: express.Application, helpers: AppHelpers) {
     const queryHandlers = {};
     const mutationHandlers = {};
 
@@ -123,7 +130,7 @@ class GraphQLRouter implements RouterInterface {
         ...this.buildTypes()
       },
       schemaDirectives: this.directives,
-      extensions: [() => new LogExtension()],
+      extensions: [() => new LogExtension(helpers.getLogger())],
       context: ({ res }) => {
         return res.locals.app;
       }

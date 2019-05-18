@@ -1,6 +1,6 @@
 export type Metadata = {
   type: string;
-  target: () => any;
+  target: Function;
   methodName: string;
   [prop: string]: any;
 };

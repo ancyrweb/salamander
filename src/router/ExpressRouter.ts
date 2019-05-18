@@ -5,8 +5,8 @@ import chalk from "chalk";
 
 import RouterInterface from "../interface/RouterInterface";
 import { Metadata } from "../kernel/MetadataCollector";
-import { logger, url } from "../helper";
-import { StringMap } from "../types";
+import { AppHelpers, StringMap } from "../types";
+import LoggerInterface from "../service/LoggerInterface";
 
 const argRegex = /:(\w*)/g;
 
@@ -24,15 +24,18 @@ type Config = {
   public: string;
 };
 
+type RouterMetadata = Metadata & { name?: string };
+
 class ExpressRouter implements RouterInterface {
   private routes: StringMap<Route> = {};
-  private config: Config;
+  private config: Partial<Config>;
+  private helpers: AppHelpers;
 
   constructor(config?: Config) {
-    this.config = config;
+    this.config = config || {};
   }
 
-  receiveMetadata(instance: object, data: Metadata[] & { name: string }) {
+  receiveMetadata(instance: object, data: RouterMetadata[]) {
     for (let metadata of data) {
       if (metadata.type === "web") {
         let params = null;
@@ -55,9 +58,17 @@ class ExpressRouter implements RouterInterface {
     }
   }
 
-  integrate(app: express.Application) {
-    app.set("views", this.config.views);
-    app.use(express.static(this.config.public));
+  integrate(app: express.Application, helpers: AppHelpers) {
+    this.helpers = helpers;
+
+    if (this.config.views) {
+      app.set("views", this.config.views);
+    }
+
+    if (this.config.public) {
+      app.use(express.static(this.config.public));
+    }
+
     app.use(cors());
 
     Object.keys(this.routes).forEach(key => {
@@ -74,13 +85,18 @@ class ExpressRouter implements RouterInterface {
           params = route.params.map(name => req.params[name]);
         }
 
-        // Give the query object
-        params.push(req.query);
+        if (route.method !== "get") {
+          params.push(req.body);
+        } else {
+          params.push(req.query);
+        }
 
         // We provide the app as a last parameter to the stack
-        params.push(res.locals.app);
+        if (res.locals.app) {
+          params.push(res.locals.app);
+        }
 
-        logRequest(req, res);
+        logRequest(this.helpers.getLogger(), req, res);
         const result = await route.target[route.targetMethodName](...params);
         if (result) {
           if (result.__smtpl__) {
@@ -109,7 +125,7 @@ class ExpressRouter implements RouterInterface {
     }
 
     const out =
-      url() +
+      this.helpers.getURL() +
       Object.keys(params).reduce((accUrl, key) => {
         return accUrl.replace(":" + key, params[key]);
       }, route.path);
@@ -118,7 +134,7 @@ class ExpressRouter implements RouterInterface {
   }
 }
 
-function logRequest(req, res) {
+function logRequest(logger: LoggerInterface, req, res) {
   // @ts-ignore
   res._startTime = new Date();
   onFinished(res, (err, res) => {
@@ -139,7 +155,8 @@ function logRequest(req, res) {
     } else {
       statusCode = chalk.redBright.bold(statusCode);
     }
-    logger().info(
+
+    logger.info(
       `${req.method.toUpperCase()} ${
         req.path
       } ${statusCode} ${elapsedTime}${unit} `

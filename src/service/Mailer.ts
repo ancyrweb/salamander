@@ -1,9 +1,9 @@
 import * as nodemailer from "nodemailer";
 
 class Mailer {
-  private mailer: nodemailer.Transporter;
+  public mailer: nodemailer.Transporter;
 
-  constructor(transport, options) {
+  constructor(transport, options?) {
     this.mailer = nodemailer.createTransport(transport, options);
   }
 

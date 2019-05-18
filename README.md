@@ -11,7 +11,6 @@ Features :
 * nodemailer
 * winston
 
-
 ### Get started
 
 `yarn add salamander-api`
